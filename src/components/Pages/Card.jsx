@@ -2,13 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
-import { Link } from 'react-router-dom'; // Assuming you're using React Router
+import { Link } from 'react-router-dom';
 
-// Register ScrollTrigger and MotionPathPlugin with GSAP
+// Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
 const Card = ({ title, description, imageSrc, animationType, linkTo }) => {
   const cardRef = useRef(null);
+  const timelineRef = useRef(null);
+  const cleanupFunctionsRef = useRef(null);
 
   useEffect(() => {
     const card = cardRef.current;
@@ -16,535 +18,500 @@ const Card = ({ title, description, imageSrc, animationType, linkTo }) => {
     const cardContent = card.querySelector('.card-content');
     const cardButton = card.querySelector('.card-button');
 
-    // Initial state
-    gsap.set(card, { opacity: 0, y: 50 });
-    gsap.set(cardImage, { scale: 1, opacity: 0.7 });
-    gsap.set(cardContent, { y: 20, opacity: 0, scale: 0.95 });
-    gsap.set(cardButton, { opacity: 0, y: 10 });
+    // Kill any existing animations to prevent conflicts
+    if (timelineRef.current) {
+      timelineRef.current.kill();
+    }
+    
+    // Run cleanup functions if they exist
+    if (cleanupFunctionsRef.current) {
+      cleanupFunctionsRef.current();
+      cleanupFunctionsRef.current = null;
+    }
 
-    // Define different hover animations based on animation type
+    // Create a main timeline for coordinating animations
+    timelineRef.current = gsap.timeline();
+
+    // Initial state setup with improved performance hints
+    gsap.set(card, { 
+      opacity: 0, 
+      y: 50,
+      force3D: true,
+      willChange: "transform, opacity"
+    });
+    gsap.set(cardImage, { 
+      scale: 1, 
+      opacity: 0.7,
+      force3D: true 
+    });
+    gsap.set(cardContent, { 
+      y: 20, 
+      opacity: 0, 
+      scale: 0.95,
+      force3D: true
+    });
+    gsap.set(cardButton, { 
+      opacity: 0, 
+      y: 10,
+      force3D: true 
+    });
+
+    // Optimized enter animations
     const enterAnimations = {
       fadeUp: () => {
-        gsap.to(cardImage, {
+        const tl = gsap.timeline({ paused: true });
+        
+        tl.to(cardImage, {
           scale: 1.1,
           opacity: 1,
           duration: 0.5,
           ease: "power2.out"
-        });
+        }, 0);
 
-        gsap.to(cardContent, {
+        tl.to(cardContent, {
           y: 0,
           opacity: 1,
           scale: 1,
           duration: 0.4,
           ease: "power2.out"
-        });
+        }, 0.1);
 
-        gsap.to(cardButton, {
+        tl.to(cardButton, {
           opacity: 1,
           y: 0,
           duration: 0.4,
-          delay: 0.1,
           ease: "power2.out"
-        });
+        }, 0.2);
 
-        gsap.to(card, {
+        tl.to(card, {
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)',
           y: -10,
-          duration: 0.4
-        });
+          duration: 0.4,
+          ease: "power2.out"
+        }, 0);
+        
+        tl.play();
+        return () => tl.reverse();
       },
 
       glow: () => {
-        gsap.to(cardImage, {
+        const tl = gsap.timeline({ paused: true });
+        
+        tl.to(cardImage, {
           filter: 'brightness(1.3) saturate(1.2)',
           scale: 1.05,
           opacity: 0.9,
-          duration: 0.5
-        });
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
 
-        gsap.to(cardContent, {
+        tl.to(cardContent, {
           y: 0,
           opacity: 1,
           scale: 1,
-          duration: 0.4
-        });
+          duration: 0.4,
+          ease: "power2.out"
+        }, 0.1);
 
-        gsap.to(cardButton, {
+        tl.to(cardButton, {
           opacity: 1,
           y: 0,
           duration: 0.4,
-          delay: 0.1,
           background: 'linear-gradient(to right, #FFC107, #FF9800)',
-          boxShadow: '0 0 15px rgba(255, 193, 7, 0.5)'
-        });
+          boxShadow: '0 0 15px rgba(255, 193, 7, 0.5)',
+          ease: "power2.out"
+        }, 0.2);
 
-        gsap.to(card, {
+        tl.to(card, {
           boxShadow: '0 0 30px 5px rgba(255, 215, 0, 0.3)',
-          duration: 0.5
-        });
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
+        
+        tl.play();
+        return () => tl.reverse();
       },
       
       rotate3D: () => {
-        // Track mouse position for 3D effect
+        let mouseTracker = { x: 0, y: 0 };
+        let mouseAnimation = null;
+        let isActive = true;
+        
+        // Smooth tracking of mouse position
         const handleMouseMove = (e) => {
+          if (!isActive) return;
+          
           const { left, top, width, height } = card.getBoundingClientRect();
-          const x = (e.clientX - left) / width - 0.5;
-          const y = (e.clientY - top) / height - 0.5;
+          mouseTracker.x = (e.clientX - left) / width - 0.5;
+          mouseTracker.y = (e.clientY - top) / height - 0.5;
           
-          gsap.to(card, {
-            rotationY: x * 10,
-            rotationX: -y * 10,
-            transformPerspective: 1000,
-            duration: 0.4,
-            ease: "power1.out"
-          });
-          
-          gsap.to(cardImage, {
-            rotationY: x * 5,
-            rotationX: -y * 5,
-            transformPerspective: 1000,
-            scale: 1.1,
-            opacity: 0.9,
-            duration: 0.4
-          });
+          if (!mouseAnimation) {
+            mouseAnimation = gsap.to(card, {
+              rotationY: () => mouseTracker.x * 10,
+              rotationX: () => -mouseTracker.y * 10,
+              transformPerspective: 1000,
+              duration: 0.4,
+              ease: "power1.out",
+              repeat: -1,
+              modifiers: {
+                rotationY: value => Math.round(value * 10) / 10, // Reduce jitter
+                rotationX: value => Math.round(value * 10) / 10  // Reduce jitter
+              }
+            });
+            
+            gsap.to(cardImage, {
+              rotationY: () => mouseTracker.x * 5,
+              rotationX: () => -mouseTracker.y * 5,
+              transformPerspective: 1000,
+              scale: 1.1,
+              opacity: 0.9,
+              duration: 0.4,
+              repeat: -1
+            });
+          }
         };
+        
+        const tl = gsap.timeline({ paused: true });
+        
+        tl.to(cardContent, {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.4,
+          ease: "power2.out"
+        }, 0);
+
+        tl.to(cardButton, {
+          opacity: 1,
+          y: 0,
+          duration: 0.4,
+          background: 'linear-gradient(to right, #8E2DE2, #4A00E0)',
+          boxShadow: '0 0 15px rgba(138, 43, 226, 0.5)',
+          ease: "power2.out"
+        }, 0.1);
+
+        tl.to(card, {
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
+        
+        card.addEventListener('mouseenter', () => {
+          isActive = true;
+        });
         
         card.addEventListener('mousemove', handleMouseMove);
         
-        gsap.to(cardContent, {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.4
-        });
-
-        gsap.to(cardButton, {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-          delay: 0.1,
-          background: 'linear-gradient(to right, #8E2DE2, #4A00E0)',
-          boxShadow: '0 0 15px rgba(138, 43, 226, 0.5)'
-        });
-
-        gsap.to(card, {
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)',
-          duration: 0.5
-        });
+        tl.play();
         
-        return () => card.removeEventListener('mousemove', handleMouseMove);
+        return () => {
+          isActive = false;
+          card.removeEventListener('mousemove', handleMouseMove);
+          if (mouseAnimation) mouseAnimation.kill();
+          return tl.reverse();
+        };
       },
 
-      // New animation type using MotionPathPlugin
       motionPath: () => {
-        // Create floating effect with slight motion path
-        const timeline = gsap.timeline({
+        // Create a more performant floating effect
+        const floatTimeline = gsap.timeline({
           repeat: -1,
           yoyo: true,
-          ease: "power1.inOut"
+          ease: "sine.inOut"
         });
 
-        // Motion path for subtle floating animation
-        timeline.to(card, {
-          motionPath: {
-            path: [
-              {x: 0, y: 0},
-              {x: 5, y: -10},
-              {x: -5, y: -5},
-              {x: 0, y: 0}
-            ],
-            curviness: 2,
-            autoRotate: false
-          },
-          duration: 4
+        // Simpler motion path for better performance
+        floatTimeline.to(card, {
+          y: '-=10',
+          x: '+=5',
+          rotation: 0.5,
+          duration: 2
+        }).to(card, {
+          y: '+=5',
+          x: '-=8',
+          rotation: -0.5,
+          duration: 2.5
+        }).to(card, {
+          y: '+=5',
+          x: '+=3',
+          rotation: 0,
+          duration: 2
         });
 
-        // Glow effect
-        gsap.to(cardImage, {
+        const tl = gsap.timeline({ paused: true });
+        
+        tl.to(cardImage, {
           filter: 'brightness(1.2) saturate(1.1)',
           scale: 1.05,
           opacity: 1,
-          duration: 0.5
-        });
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
 
-        gsap.to(cardContent, {
+        tl.to(cardContent, {
           y: 0,
           opacity: 1,
           scale: 1,
-          duration: 0.4
-        });
+          duration: 0.4,
+          ease: "power2.out"
+        }, 0.1);
 
-        gsap.to(cardButton, {
+        tl.to(cardButton, {
           opacity: 1,
           y: 0,
           duration: 0.4,
-          delay: 0.1,
           background: 'linear-gradient(to right, #00C9FF, #92FE9D)',
-          boxShadow: '0 0 15px rgba(0, 201, 255, 0.5)'
-        });
+          boxShadow: '0 0 15px rgba(0, 201, 255, 0.5)',
+          ease: "power2.out"
+        }, 0.2);
 
-        gsap.to(card, {
+        tl.to(card, {
           boxShadow: '0 10px 30px rgba(0, 201, 255, 0.3), 0 0 15px rgba(146, 254, 157, 0.3)',
-          duration: 0.5
-        });
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
         
-        return () => timeline.kill();
+        tl.play();
+        
+        return () => {
+          floatTimeline.kill();
+          return tl.reverse();
+        };
       },
 
-      // Another MotionPath animation with circular movement
       orbit: () => {
-        // Create small elements that orbit around the card
+        // Create optimized particle system
+        const particleCount = 5; // Reduced for better performance
+        const particles = [];
         const particleContainer = document.createElement('div');
         particleContainer.className = 'absolute inset-0 overflow-hidden pointer-events-none';
         card.appendChild(particleContainer);
         
-        // Create orbit particles
-        const particles = [];
         const colors = ['#FF3366', '#00C9FF', '#FFCC00', '#92FE9D', '#F761A1'];
+        const mainTimeline = gsap.timeline();
         
-        for (let i = 0; i < 6; i++) {
+        // Create particles with staggered animations for better performance
+        for (let i = 0; i < particleCount; i++) {
           const particle = document.createElement('div');
           const size = 4 + Math.random() * 6;
           particle.className = 'absolute rounded-full z-10';
           particle.style.width = `${size}px`;
           particle.style.height = `${size}px`;
-          particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          particle.style.backgroundColor = colors[i % colors.length];
           
           particleContainer.appendChild(particle);
           particles.push(particle);
           
-          // Set initial position
+          // Set initial position - center of the card
           gsap.set(particle, {
             x: card.clientWidth / 2,
             y: card.clientHeight / 2,
-            opacity: 0
+            opacity: 0,
+            force3D: true
           });
           
-          // Create unique orbit for each particle
-          const timeline = gsap.timeline({
-            repeat: -1,
+          // Create a simpler orbit animation
+          const tl = gsap.timeline({
             delay: i * 0.2
           });
           
-          const radius = 50 + Math.random() * 80;
-          const duration = 3 + Math.random() * 4;
+          const radius = 40 + Math.random() * 60;
+          const duration = 4 + Math.random() * 3;
           
-          timeline.to(particle, {
+          tl.to(particle, {
             opacity: 0.8,
-            duration: 0.3
+            duration: 0.3,
+            ease: "power1.in"
           });
           
-          timeline.to(particle, {
-            motionPath: {
-              path: `M 0,0 m -${radius}, 0 a ${radius},${radius} 0 1,0 ${radius*2},0 a ${radius},${radius} 0 1,0 -${radius*2},0`,
-              alignOrigin: [0.5, 0.5],
-              autoRotate: false
-            },
+          // Use simple circular animation instead of complex motionPath
+          tl.to(particle, {
             duration: duration,
+            repeat: -1,
             ease: "none",
-            repeat: -1
-          }, 0);
+            onUpdate: function() {
+              const progress = this.progress();
+              const angle = progress * Math.PI * 2;
+              const x = card.clientWidth / 2 + Math.cos(angle) * radius;
+              const y = card.clientHeight / 2 + Math.sin(angle) * radius;
+              gsap.set(particle, { x, y });
+            }
+          });
+          
+          mainTimeline.add(tl, 0);
         }
 
-        // Add glow to card
-        gsap.to(cardImage, {
+        const tl = gsap.timeline({ paused: true });
+        
+        tl.to(cardImage, {
           filter: 'brightness(1.2) saturate(1.1)',
           scale: 1.05,
           opacity: 0.9,
-          duration: 0.5
-        });
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
 
-        gsap.to(cardContent, {
+        tl.to(cardContent, {
           y: 0,
           opacity: 1,
           scale: 1,
-          duration: 0.4
-        });
+          duration: 0.4,
+          ease: "power2.out"
+        }, 0.1);
 
-        gsap.to(cardButton, {
+        tl.to(cardButton, {
           opacity: 1,
           y: 0,
           duration: 0.4,
-          delay: 0.1,
           background: 'linear-gradient(to right, #F761A1, #8C1BAB)',
-          boxShadow: '0 0 15px rgba(247, 97, 161, 0.5)'
-        });
+          boxShadow: '0 0 15px rgba(247, 97, 161, 0.5)',
+          ease: "power2.out"
+        }, 0.2);
 
-        gsap.to(card, {
+        tl.to(card, {
           boxShadow: '0 10px 30px rgba(140, 27, 171, 0.3)',
-          duration: 0.5
-        });
+          duration: 0.5,
+          ease: "power2.out"
+        }, 0);
+        
+        tl.play();
         
         return () => {
-          // Clean up particles
+          mainTimeline.kill();
           particles.forEach(particle => {
             gsap.killTweensOf(particle);
-            if (particle.parentNode) {
-              particle.parentNode.removeChild(particle);
-            }
           });
           if (particleContainer.parentNode) {
             particleContainer.parentNode.removeChild(particleContainer);
           }
+          return tl.reverse();
         };
       }
     };
 
-    const leaveAnimations = {
-      fadeUp: () => {
-        gsap.to(cardImage, {
-          scale: 1,
-          opacity: 0.7,
-          duration: 0.5,
-          ease: "power2.out"
-        });
-
-        gsap.to(cardContent, {
-          y: 10,
-          opacity: 0.9,
-          scale: 0.98,
-          duration: 0.4,
-          ease: "power2.out"
-        });
-
-        gsap.to(cardButton, {
-          opacity: 0.9,
-          duration: 0.3
-        });
-
-        gsap.to(card, {
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-          y: 0,
-          duration: 0.4
-        });
-      },
-
-      glow: () => {
-        gsap.to(cardImage, {
-          filter: 'brightness(1) saturate(1)',
-          scale: 1,
-          opacity: 0.7,
-          duration: 0.5
-        });
-
-        gsap.to(cardContent, {
-          y: 10,
-          opacity: 0.9,
-          scale: 0.98,
-          duration: 0.4
-        });
-
-        gsap.to(cardButton, {
-          opacity: 0.9,
-          duration: 0.3,
-          background: 'linear-gradient(to right, #FF9800, #FF9800)',
-          boxShadow: 'none'
-        });
-
-        gsap.to(card, {
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-          duration: 0.5
-        });
-      },
-      
-      rotate3D: () => {
-        gsap.to(card, {
-          rotationY: 0,
-          rotationX: 0,
-          transformPerspective: 1000,
-          duration: 0.6,
-          ease: "power1.out"
-        });
-        
-        gsap.to(cardImage, {
-          rotationY: 0,
-          rotationX: 0,
-          scale: 1,
-          opacity: 0.7,
-          duration: 0.6
-        });
-        
-        gsap.to(cardContent, {
-          y: 10,
-          opacity: 0.9,
-          scale: 0.98,
-          duration: 0.4
-        });
-
-        gsap.to(cardButton, {
-          opacity: 0.9,
-          duration: 0.3,
-          background: 'linear-gradient(to right, #8E2DE2, #8E2DE2)',
-          boxShadow: 'none'
-        });
-
-        gsap.to(card, {
-          boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-          duration: 0.6
-        });
-      },
-
-      // New animation leave effect for motionPath
-      motionPath: () => {
-        gsap.killTweensOf(card);
-        gsap.to(card, {
-          x: 0,
-          y: 0,
-          duration: 0.6,
-          ease: "power2.out"
-        });
-        
-        gsap.to(cardImage, {
-          filter: 'brightness(1) saturate(1)',
-          scale: 1,
-          opacity: 0.7,
-          duration: 0.5
-        });
-
-        gsap.to(cardContent, {
-          y: 10,
-          opacity: 0.9,
-          scale: 0.98,
-          duration: 0.4
-        });
-
-        gsap.to(cardButton, {
-          opacity: 0.9,
-          duration: 0.3,
-          background: 'linear-gradient(to right, #00C9FF, #00C9FF)',
-          boxShadow: 'none'
-        });
-
-        gsap.to(card, {
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-          duration: 0.5
-        });
-      },
-
-      // Leave animation for orbit
-      orbit: () => {
-        // Find and remove all particle elements
-        const particles = card.querySelectorAll('.absolute.rounded-full');
-        particles.forEach(particle => {
-          gsap.to(particle, {
-            opacity: 0,
-            duration: 0.3,
-            onComplete: () => {
-              if (particle.parentNode) {
-                particle.parentNode.removeChild(particle);
-              }
-            }
-          });
-        });
-        
-        gsap.to(cardImage, {
-          filter: 'brightness(1) saturate(1)',
-          scale: 1,
-          opacity: 0.7,
-          duration: 0.5
-        });
-
-        gsap.to(cardContent, {
-          y: 10,
-          opacity: 0.9,
-          scale: 0.98,
-          duration: 0.4
-        });
-
-        gsap.to(cardButton, {
-          opacity: 0.9,
-          duration: 0.3,
-          background: 'linear-gradient(to right, #F761A1, #F761A1)',
-          boxShadow: 'none'
-        });
-
-        gsap.to(card, {
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-          duration: 0.5
-        });
-      }
-    };
-
-    // Cool initial entry animation using MotionPathPlugin for all cards
-    gsap.fromTo(card, 
-      { 
-        opacity: 0,
-        y: 100,
-        x: -20
-      },
-      {
-        opacity: 1,
-        duration: 1.2,
-        delay: 0.1,
-        motionPath: {
-          path: [
-            {x: -20, y: 100},
-            {x: 10, y: 50},
-            {x: -5, y: 30},
-            {x: 0, y: 0}
-          ],
-          curviness: 2
-        },
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: card,
-          start: "top bottom-=150",
-          end: "bottom top",
-          toggleActions: "play none none reverse"
-        }
-      }
-    );
-
-    // Add additional reveal animations for content elements
-    ScrollTrigger.create({
-      trigger: card,
-      start: "top bottom-=150",
-      end: "bottom top",
-      toggleActions: "play none none reverse",
-      onEnter: () => {
-        gsap.to(cardContent, {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.6,
-          delay: 0.3,
-          ease: "power2.out"
-        });
-
-        gsap.to(cardButton, {
-          opacity: 1,
-          y: 0,
-          duration: 0.4,
-          delay: 0.4
-        });
+    // More efficient scroll animation with fewer callbacks
+    const scrollTimeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: card,
+        start: "top bottom-=100",
+        end: "bottom top+=100",
+        toggleActions: "play none none reverse",
+        once: false
       }
     });
 
-    // Add event listeners for hover animations
+    // Smoother entry animation with better motion path
+    scrollTimeline.fromTo(card, 
+      { 
+        opacity: 0,
+        y: 80,
+        x: -10,
+        force3D: true
+      },
+      {
+        opacity: 1,
+        duration: 0.8,
+        ease: "power2.out",
+        motionPath: {
+          path: [
+            {x: -10, y: 80},
+            {x: 5, y: 40},
+            {x: -2, y: 20},
+            {x: 0, y: 0}
+          ],
+          curviness: 1.5
+        }
+      }
+    ).fromTo(cardImage,
+      { 
+        opacity: 0.5,
+        scale: 0.95,
+        force3D: true
+      },
+      {
+        opacity: 0.7,
+        scale: 1,
+        duration: 0.6,
+        ease: "power2.out"
+      }, 
+      "-=0.4"
+    ).fromTo(cardContent,
+      { 
+        y: 20, 
+        opacity: 0,
+        force3D: true
+      },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.5,
+        ease: "power2.out"
+      }, 
+      "-=0.3"
+    ).fromTo(cardButton,
+      { 
+        opacity: 0, 
+        y: 10,
+        force3D: true
+      },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.4,
+        ease: "power2.out"
+      }, 
+      "-=0.2"
+    );
+
+    // Add event listeners for hover animations with better cleanup
     const enterFunction = enterAnimations[animationType];
-    const leaveFunction = leaveAnimations[animationType];
     
-    if (enterFunction && leaveFunction) {
-      const onEnter = () => {
-        const cleanup = enterFunction();
-        return cleanup;
+    if (enterFunction) {
+      let cleanupFunc = null;
+      
+      const handleEnter = () => {
+        if (cleanupFunc) {
+          cleanupFunc();
+        }
+        cleanupFunc = enterFunction();
       };
       
-      let cleanup;
-      card.addEventListener('mouseenter', () => {
-        cleanup = onEnter();
-      });
+      const handleLeave = () => {
+        if (cleanupFunc) {
+          cleanupFunc();
+          cleanupFunc = null;
+        }
+      };
       
-      card.addEventListener('mouseleave', () => {
-        if (cleanup) cleanup();
-        leaveFunction();
-      });
+      card.addEventListener('mouseenter', handleEnter);
+      card.addEventListener('mouseleave', handleLeave);
+      
+      // Store cleanup function for component unmount
+      cleanupFunctionsRef.current = () => {
+        card.removeEventListener('mouseenter', handleEnter);
+        card.removeEventListener('mouseleave', handleLeave);
+        if (cleanupFunc) {
+          cleanupFunc();
+          cleanupFunc = null;
+        }
+      };
     }
 
-    // Cleanup
+    // Cleanup on unmount
     return () => {
-      ScrollTrigger.getAll().forEach(st => st.kill());
+      if (timelineRef.current) {
+        timelineRef.current.kill();
+      }
+      
+      if (cleanupFunctionsRef.current) {
+        cleanupFunctionsRef.current();
+      }
+      
+      ScrollTrigger.getAll().forEach(st => {
+        if (st.vars.trigger === card) {
+          st.kill();
+        }
+      });
     };
   }, [animationType]);
 
@@ -567,7 +534,7 @@ const Card = ({ title, description, imageSrc, animationType, linkTo }) => {
   return (
     <div
       ref={cardRef}
-      className="card bg-black rounded-lg overflow-hidden shadow-lg transition-all duration-300 h-96 relative transform-gpu"
+      className="card bg-black rounded-lg overflow-hidden shadow-lg transition-all duration-300 h-96 relative transform-gpu will-change-transform"
     >
       <div className="card-image h-48 overflow-hidden">
         <img
@@ -589,7 +556,7 @@ const Card = ({ title, description, imageSrc, animationType, linkTo }) => {
   );
 };
 
-// App component with different animation types for each card
+// App component with different animation types
 const App = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
@@ -605,7 +572,7 @@ const App = () => {
             title="Fundamentals Course"
             description="Master the basics of makeup artistry with personalized instruction for any occasion, including bridal and special events."
             imageSrc="https://static.vecteezy.com/system/resources/previews/007/584/570/large_2x/cosmetics-on-black-background-and-make-up-tools-top-view-and-mock-up-copy-space-free-photo.jpg"
-            animationType="motionPath" // Changed to new motion path animation
+            animationType="motionPath"
             linkTo="/fundamentals"
           />
 
@@ -613,7 +580,7 @@ const App = () => {
             title="Advanced Techniques"
             description="Elevate your skills with professional-grade techniques. Learn color theory, facial structure, and high-fashion application methods."
             imageSrc="/api/placeholder/400/320"
-            animationType="orbit" // Changed to orbit animation
+            animationType="orbit"
             linkTo="/advanced"
           />
 
@@ -621,7 +588,7 @@ const App = () => {
             title="Special Effects"
             description="Create stunning transformations for film, TV, and theater. From scars and prosthetics to fantasy characters and aging effects."
             imageSrc="/api/placeholder/400/320"
-            animationType="rotate3D" // Keeping original 3D rotation animation
+            animationType="rotate3D"
             linkTo="/special-effects"
           />
         </div>
