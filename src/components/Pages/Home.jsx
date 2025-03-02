@@ -3,6 +3,7 @@ import VideoSlider from "../Slider/VideoSlider";
 import {  videoSlides } from "../../utils/data/data";
 import AnimatedBanner from "./AnimatedBanner";
 import Card from "../Pages/Card"
+import MakeupSlider from "../Slider/MakeUpSlider";
 
 export default function Home() {
 
@@ -13,7 +14,9 @@ export default function Home() {
   
         
         <section className="w-full">
-          <VideoSlider slides={videoSlides} />
+          {/* <VideoSlider slides={videoSlides}/ /> */}
+          <MakeupSlider/>
+          
         </section>
 
         <div className="min-h-screen bg-gray-100 py-12 px-4">

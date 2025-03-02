@@ -1,13 +1,13 @@
 export const videoSlides = [
-    {
-      id: 1,
-      videoSrc: "https://youtu.be/LLJSfU8oD60?si=9bidg9gqWGx_wz3y", // Replace with your video URLs
-      title: "New Collection Launch",
-      description: "Discover our latest makeup collection with vibrant colors for every skin tone.",
-      ctaText: "Shop Now",
-      ctaLink: "/makeup-products"
-      
-    },
+  {
+    id: 1,
+    videoSrc: "https://www.youtube.com/embed/LLJSfU8oD60", 
+    title: "New Collection Launch",
+    description: "Discover our latest makeup collection with vibrant colors for every skin tone.",
+    ctaText: "Shop Now",
+    ctaLink: "/makeup-products"
+  },
+  
     {
       id: 2,
       videoSrc: "/path/to/your/video2.mp4",
