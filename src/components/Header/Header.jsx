@@ -34,7 +34,7 @@ export default function Header() {
     </Link>
 
     {/* Left Navigation Links - Hidden on mobile */}
-    <div className="hidden md:flex items-center justify-center w-full px-8 -my-16 space-x-8">
+    <div className="hidden md:flex items-center justify-center w-full px-8 -my-5 space-x-8">
       <NavLink to="/">Home</NavLink>
       <NavLink to="/about-us">About Us</NavLink>
       <NavLink to="/makeup-studio">Makeup Studio</NavLink>
